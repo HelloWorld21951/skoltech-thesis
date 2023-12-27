@@ -1,0 +1,24 @@
+collision_detector:
+  outside_polygon:
+    - [ -5, -5 ]
+    - [ -5, 5 ]
+    - [ 5, 5 ]
+    - [ 5, -5 ]
+
+  inside_polygon:
+    - [ [ 1, 2 ], [ 1, 5 ], [ 5, 5 ], [ 5, 2 ] ]
+
+  robot_shapes:
+    - [ [ -1, -0.5 ], [ -1, 0.5 ], [ 1, 0.5 ], [ 1, -0.5 ] ]
+    - [ [ -1, -0.5 ], [ -1, 0.5 ], [ 1, 0.5 ], [ 1, -0.5 ] ]
+
+start: [ [ 0, 3, -1.57 ], [ 3, 0, 3.14 ]]
+
+goal: [ [ 3, 0, 0 ], [ 0, 3, 1.57 ]]
+
+bounds:
+  min_x: -5
+  max_x: 5
+  min_y: -5
+  max_y: 5
+type_: MultiRobotPathPlannerTask

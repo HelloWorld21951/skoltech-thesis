@@ -1,0 +1,29 @@
+collision_detector:
+  outside_polygon: [
+    [ -5, -5 ], [ -5, 5 ], [ 5, 5 ], [ 5, -5 ]
+  ]
+  inside_polygon: [
+    [ [ -5, -5 ], [ -5, 0 ], [ 0, 0 ], [ 0, -5 ] ],
+    [ [ -1, 1.25 ], [ 0, 1.25 ], [ 0, 5 ], [ -1, 5 ] ],
+    [ [ 0, 0 ], [ 3.75, 0 ], [ 3.75, -1 ], [ 0, -1 ] ],
+  ]
+  robot_shape: [
+    [ -2, -0.2 ], [ -2, 0.2 ], [ 2, 0.2 ], [ 2, -0.2 ]
+  ]
+  collision_step: 0.01
+
+start:
+  x: -3
+  y: 2.5
+  angle: 1.57
+
+goal:
+  x: 2.5
+  y: -3
+  angle: 0
+
+bounds:
+  min_x: -5
+  max_x: 5
+  min_y: -5
+  max_y: 5

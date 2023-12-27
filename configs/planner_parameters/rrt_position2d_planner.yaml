@@ -1,0 +1,4 @@
+iterations: 100
+steer_distance: 0.5
+goal_point_probability: 0.25
+goal_threshold: 0.1

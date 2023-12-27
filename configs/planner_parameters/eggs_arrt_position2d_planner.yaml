@@ -1,0 +1,9 @@
+iterations: 10
+steer_distance: 0.5
+goal_point_probability: 0.25
+a_star_iterations: 100
+goal_threshold: 0.1
+grid_planner_factory:
+  padding_x: 0
+  padding_y: 10
+  grid_planner_type: "eggs"
