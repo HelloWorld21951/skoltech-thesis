@@ -2,3 +2,4 @@
 .vscode
 __pycache__
 scripts/data
+venv
