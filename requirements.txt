@@ -1,6 +1,5 @@
 clearml==1.13.2
 dash==2.14.2
-matplotlib==3.8.1
 numpy==1.22.4
 plotly==5.18.0
 pytest==6.2.5
@@ -8,3 +7,6 @@ PyYAML==6.0.1
 Shapely==2.0.2
 torch==2.1.2
 tqdm==4.66.1
+Pillow == 10.1.0
+matplotlib == 3.7.3
+networkx == 3.1
