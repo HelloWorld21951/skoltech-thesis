@@ -9,11 +9,16 @@ from torch import nn
 from tqdm import tqdm
 
 from swarm_nfomp.collision_detector.multi_robot_collision_detector import MultiRobotCollisionDetector
+from swarm_nfomp.collision_detector.robot_collision_detector import RobotCollisionDetector
 from swarm_nfomp.utils.math import interpolate_1d_pytorch, wrap_angles
 from swarm_nfomp.utils.metric_manager import MetricManager
+from swarm_nfomp.utils.position2d import Position2D
 from swarm_nfomp.utils.position_array2d import PositionArray2D
 from swarm_nfomp.utils.rectangle_bounds import RectangleBounds2D
 from swarm_nfomp.utils.timer import Timer
+
+from swarm_nfomp.planner.planner import PlannerTask
+from swarm_nfomp.arrt.rrt_position2d_planner import RRTPosition2DPlanner, RectangleBoundsWithAngle2D
 
 
 @dataclasses.dataclass
@@ -152,7 +157,8 @@ class OptimizerWithLagrangeMultipliers:
 
 
 class PathOptimizedStateInitializer:
-    def __init__(self, planner_task: MultiRobotPathPlannerTask, path_state_count: int, device: str):
+    def __init__(self, planner: RRTPosition2DPlanner, planner_task: MultiRobotPathPlannerTask, path_state_count: int, device: str):
+        self._planner = planner
         self._planner_task = planner_task
         self._path_state_count = path_state_count
         self._device = device
@@ -179,15 +185,37 @@ class PathOptimizedStateInitializer:
         start_point: np.ndarray = self._planner_task.start.as_vec()
         goal_point: np.ndarray = self._planner_task.goal.as_vec()
         trajectory_length = self._path_state_count + 2
-        trajectory = torch.zeros(self._path_state_count + 2, len(start_point), 3, requires_grad=True,
+        trajectory = torch.zeros(trajectory_length, len(start_point), 3, requires_grad=True,
                                  device=self._device, dtype=torch.float32)
+        
+        bounds = RectangleBoundsWithAngle2D.from_rectangle_bounds_2d(self._planner_task.bounds)
+
         for i in range(len(start_point)):
-            trajectory[:, i, 0] = torch.linspace(start_point[i, 0], goal_point[i, 0], trajectory_length,
-                                                 device=self._device)
-            trajectory[:, i, 1] = torch.linspace(start_point[i, 1], goal_point[i, 1], trajectory_length)
-            trajectory[:, i, 2] = start_point[i, 2] + torch.linspace(0,
-                                                                     wrap_angles(goal_point[i, 2] - start_point[i, 2]),
-                                                                     trajectory_length, device=self._device)
+            start = Position2D(start_point[i, 0], start_point[i, 1], start_point[i, 2])
+            goal = Position2D(goal_point[i, 0], goal_point[i, 1], goal_point[i, 2])
+            collision_detector = RobotCollisionDetector(
+                inside_rectangle_region=self._planner_task.collision_detector.inside_rectangle_region,
+                outside_rectangle_region=self._planner_task.collision_detector.outside_rectangle_region,
+                robot_shape=self._planner_task.collision_detector.robot_shapes[i],
+                collision_step=0.05
+            )
+
+            self._planner.set_planner_task(PlannerTask(start, goal, collision_detector, bounds))
+            path = self._planner.plan()
+            path.add_intermediate_positions(trajectory_length)
+
+            for j in range(len(path.positions)):
+                trajectory[j, i, 0] = path.positions[j].x
+                trajectory[j, i, 1] = path.positions[j].y
+                trajectory[j, i, 2] = path.positions[j].angle
+
+            # trajectory[:, i, 0] = torch.linspace(start_point[i, 0], goal_point[i, 0], trajectory_length,
+            #                                      device=self._device)
+            # trajectory[:, i, 1] = torch.linspace(start_point[i, 1], goal_point[i, 1], trajectory_length)
+            # trajectory[:, i, 2] = start_point[i, 2] + torch.linspace(0,
+            #                                                          wrap_angles(goal_point[i, 2] - start_point[i, 2]),
+            #                                                          trajectory_length, device=self._device)
+
         return trajectory
 
 

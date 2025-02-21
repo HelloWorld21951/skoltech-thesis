@@ -28,6 +28,13 @@ class Path(Generic[State]):
     @classmethod
     def from_list(cls, array: List[State]):
         raise NotImplementedError()
+    
+    @property
+    def positions(self) -> List[State]:
+        raise NotImplementedError()
+    
+    def add_intermediate_positions(self, total_positions_in_path: int) -> None:
+        raise NotImplementedError()
 
 
 class Planner(Generic[State]):

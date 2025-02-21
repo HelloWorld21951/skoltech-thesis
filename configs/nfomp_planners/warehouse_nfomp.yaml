@@ -32,6 +32,11 @@ path_optimizer:
     second_differences_weight: 30
   state_initializer:
     path_state_count: 100
+    planner:
+      iterations: 10000
+      steer_distance: 0.5
+      goal_point_probability: 0.25
+      goal_threshold: 0.01
   grad_preconditioner:
     velocity_hessian_weight: 300
 

@@ -98,20 +98,20 @@ def main():
     )
     args = get_arguments()
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    task_config_path = os.path.join(
-        parent_path, "configs/multi_robot_planner_tasks/four_robot_task_random.yaml"
-    )
-    # task_config_path = os.path.join(parent_path, "configs/multi_robot_planner_tasks/two_robot_task_corner.yaml")
     # task_config_path = os.path.join(
-    #     parent_path, "configs/multi_robot_planner_tasks/two_robot_corridor.yaml"
+    #     parent_path, "configs/multi_robot_planner_tasks/four_robot_task_random.yaml"
     # )
+    # task_config_path = os.path.join(parent_path, "configs/multi_robot_planner_tasks/two_robot_task_corner.yaml")
+    task_config_path = os.path.join(
+        parent_path, "configs/multi_robot_planner_tasks/two_robot_corridor.yaml"
+    )
     planner_config_path = os.path.join(
         parent_path, "configs/nfomp_planners/warehouse_nfomp.yaml"
     )
 
     task_config = load_config(task_config_path)
-    task.connect(task_config, name="task_config")
     planner_config = load_config(planner_config_path)
+    task.connect(task_config, name="task_config")
     task.connect(planner_config, name="planner_config")
 
     factory = UniversalFactory(
@@ -137,6 +137,7 @@ def main():
         metric_manager=metric_manager,
     )
     metric_calculator = WarehouseNfompMetricCalculator(metric_manager)
+
     planner.setup()
     queue = None
     process = None
