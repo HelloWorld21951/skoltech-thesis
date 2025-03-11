@@ -26,21 +26,22 @@ path_optimizer:
     step_size_up: 100
     step_size_down: 100
   loss_builder:
-    regularization_weight: 0.5
-    collision_weight: 0.003
+    regularization_weight: 5.0
+    collision_weight: 5.0
     direction_constraint_weight: 30
     second_differences_weight: 30
   state_initializer:
     path_state_count: 100
     planner:
-      iterations: 10000
+      iterations: 5000
       steer_distance: 0.5
-      goal_point_probability: 0.25
+      goal_point_probability: 0.35
       goal_threshold: 0.01
+      search_radius: 1.0
   grad_preconditioner:
     velocity_hessian_weight: 300
 
-seed: 200
+seed: 2025
 reparametrize_rate: 10
 collision_model_optimization_rate: 3
 type_: WarehouseNFOMP

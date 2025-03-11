@@ -18,7 +18,7 @@ from swarm_nfomp.utils.rectangle_bounds import RectangleBounds2D
 from swarm_nfomp.utils.timer import Timer
 
 from swarm_nfomp.planner.planner import PlannerTask
-from swarm_nfomp.arrt.rrt_position2d_planner import RRTPosition2DPlanner, RectangleBoundsWithAngle2D
+from swarm_nfomp.arrt.rrt_position2d_planner import RRTPosition2DPlanner, RRTStarPosition2DPlanner, RectangleBoundsWithAngle2D
 
 
 @dataclasses.dataclass
@@ -64,12 +64,16 @@ class MultiRobotPathOptimizedState:
     def reparametrize(self):
         distances = self.calculate_distances()
         old_times = torch.cumsum(distances, dim=0)
-        old_times = torch.cat([torch.zeros(1, device=self.device), old_times], dim=0)
-        new_times = torch.linspace(0, old_times[-1], old_times.shape[0], device=self.device)
+        old_times = torch.cat(
+            [torch.zeros(1, device=self.device), old_times], dim=0)
+        new_times = torch.linspace(
+            0, old_times[-1], old_times.shape[0], device=self.device)
         positions: torch.Tensor = self.positions
         reshaped_positions = positions.reshape(self.positions.shape[0], -1)
-        interpolated_positions = interpolate_1d_pytorch(reshaped_positions, old_times, new_times)[1:-1]
-        self.positions_.data = interpolated_positions.reshape(*self.positions_.shape)
+        interpolated_positions = interpolate_1d_pytorch(
+            reshaped_positions, old_times, new_times)[1:-1]
+        self.positions_.data = interpolated_positions.reshape(
+            *self.positions_.shape)
         multipliers_old_times = (old_times[:-1] + old_times[1:]) / 2
         multipliers_new_times = (new_times[:-1] + new_times[1:]) / 2
         self.direction_constraint_multipliers.data = interpolate_1d_pytorch(
@@ -135,7 +139,8 @@ class OptimizerWithLagrangeMultipliers:
 
     # noinspection PyMethodOverriding
     def setup(self, model_parameters, lagrange_multiplier_parameters):
-        self._optimizer = torch.optim.RMSprop(model_parameters, lr=self._parameters.lr)
+        self._optimizer = torch.optim.RMSprop(
+            model_parameters, lr=self._parameters.lr)
         self._scheduler = torch.optim.lr_scheduler.CyclicLR(self._optimizer, base_lr=self._parameters.base_lr,
                                                             max_lr=self._parameters.max_lr,
                                                             step_size_up=self._parameters.step_size_up,
@@ -170,9 +175,11 @@ class PathOptimizedStateInitializer:
                                           dtype=torch.float32)
             goal_position = torch.tensor(self._planner_task.goal.as_vec(), requires_grad=False, device=self._device,
                                          dtype=torch.float32)
-            goal_position[:, 2] = start_position[:, 2] + wrap_angles(goal_position[:, 2] - start_position[:, 2])
+            goal_position[:, 2] = start_position[:, 2] + \
+                wrap_angles(goal_position[:, 2] - start_position[:, 2])
             return MultiRobotPathOptimizedState(
-                positions_=positions[1:-1].clone().detach().requires_grad_(True),
+                positions_=positions[1:-
+                                     1].clone().detach().requires_grad_(True),
                 start_position=start_position,
                 goal_position=goal_position,
                 direction_constraint_multipliers=torch.zeros(self._path_state_count + 1, len(self._planner_task.start),
@@ -187,34 +194,42 @@ class PathOptimizedStateInitializer:
         trajectory_length = self._path_state_count + 2
         trajectory = torch.zeros(trajectory_length, len(start_point), 3, requires_grad=True,
                                  device=self._device, dtype=torch.float32)
-        
-        bounds = RectangleBoundsWithAngle2D.from_rectangle_bounds_2d(self._planner_task.bounds)
+
+        bounds = RectangleBoundsWithAngle2D.from_rectangle_bounds_2d(
+            self._planner_task.bounds)
 
         for i in range(len(start_point)):
-            start = Position2D(start_point[i, 0], start_point[i, 1], start_point[i, 2])
-            goal = Position2D(goal_point[i, 0], goal_point[i, 1], goal_point[i, 2])
-            collision_detector = RobotCollisionDetector(
-                inside_rectangle_region=self._planner_task.collision_detector.inside_rectangle_region,
-                outside_rectangle_region=self._planner_task.collision_detector.outside_rectangle_region,
-                robot_shape=self._planner_task.collision_detector.robot_shapes[i],
-                collision_step=0.05
-            )
+            # start = Position2D(
+            #     start_point[i, 0], start_point[i, 1], start_point[i, 2])
+            # goal = Position2D(goal_point[i, 0],
+            #                   goal_point[i, 1], goal_point[i, 2])
+            # collision_detector = RobotCollisionDetector(
+            #     inside_rectangle_region=self._planner_task.collision_detector.inside_rectangle_region,
+            #     outside_rectangle_region=self._planner_task.collision_detector.outside_rectangle_region,
+            #     robot_shape=self._planner_task.collision_detector.robot_shapes[i],
+            #     collision_gap=0.05,
+            #     collision_step=0.05,
+            # )
 
-            self._planner.set_planner_task(PlannerTask(start, goal, collision_detector, bounds))
-            path = self._planner.plan()
-            path.add_intermediate_positions(trajectory_length)
+            # self._planner.set_planner_task(PlannerTask(
+            #     start, goal, collision_detector, bounds))
+            # path = self._planner.plan()
+            # print(f"{self._planner.is_goal_reached=}")
+            # path.add_intermediate_positions(trajectory_length)
 
-            for j in range(len(path.positions)):
-                trajectory[j, i, 0] = path.positions[j].x
-                trajectory[j, i, 1] = path.positions[j].y
-                trajectory[j, i, 2] = path.positions[j].angle
+            # for j in range(len(path.positions)):
+            #     trajectory[j, i, 0] = path.positions[j].x
+            #     trajectory[j, i, 1] = path.positions[j].y
+            #     trajectory[j, i, 2] = path.positions[j].angle
 
-            # trajectory[:, i, 0] = torch.linspace(start_point[i, 0], goal_point[i, 0], trajectory_length,
-            #                                      device=self._device)
-            # trajectory[:, i, 1] = torch.linspace(start_point[i, 1], goal_point[i, 1], trajectory_length)
-            # trajectory[:, i, 2] = start_point[i, 2] + torch.linspace(0,
-            #                                                          wrap_angles(goal_point[i, 2] - start_point[i, 2]),
-            #                                                          trajectory_length, device=self._device)
+            trajectory[:, i, 0] = torch.linspace(start_point[i, 0], goal_point[i, 0], trajectory_length,
+                                                 device=self._device)
+            trajectory[:, i, 1] = torch.linspace(
+                start_point[i, 1], goal_point[i, 1], trajectory_length)
+            trajectory[:, i, 2] = start_point[i, 2] + torch.linspace(0,
+                                                                     wrap_angles(
+                                                                         goal_point[i, 2] - start_point[i, 2]),
+                                                                     trajectory_length, device=self._device)
 
         return trajectory
 
@@ -236,21 +251,28 @@ class MultiRobotPathLossBuilder:
         self._metric_manager = metric_manager
 
     def get_loss(self, collision_model: nn.Module, optimized_state: MultiRobotPathOptimizedState):
-        distance_loss = self._distance_loss(optimized_state) * self._parameters.regularization_weight
-        collision_loss = self._collision_loss(collision_model, optimized_state) * self._parameters.collision_weight
-        direction_constraint_loss = self._direction_constraint_loss(optimized_state)
+        distance_loss = self._distance_loss(
+            optimized_state) * self._parameters.regularization_weight
+        collision_loss = self._collision_loss(
+            collision_model, optimized_state) * self._parameters.collision_weight
+        direction_constraint_loss = self._direction_constraint_loss(
+            optimized_state)
         second_differences_loss = self._second_differences_loss(
             optimized_state) * self._parameters.second_differences_weight
-        self._metric_manager.add_metric("Path Optimization Losses", distance_loss.item(), 'distance_loss')
-        self._metric_manager.add_metric("Path Optimization Losses", collision_loss.item(), 'collision_loss')
-        self._metric_manager.add_metric("Path Optimization Losses", direction_constraint_loss.item(), 'direction_loss')
+        self._metric_manager.add_metric(
+            "Path Optimization Losses", distance_loss.item(), 'distance_loss')
+        self._metric_manager.add_metric(
+            "Path Optimization Losses", collision_loss.item(), 'collision_loss')
+        self._metric_manager.add_metric(
+            "Path Optimization Losses", direction_constraint_loss.item(), 'direction_loss')
         self._metric_manager.add_metric("Path Optimization Losses", second_differences_loss.item(),
                                         'second_differences_loss')
         loss = distance_loss
         loss = loss + collision_loss
         loss = loss + direction_constraint_loss
         loss = loss + second_differences_loss
-        self._metric_manager.add_metric("Path Optimization Losses", loss.item(), 'total_loss')
+        self._metric_manager.add_metric(
+            "Path Optimization Losses", loss.item(), 'total_loss')
         return loss
 
     @staticmethod
@@ -273,9 +295,11 @@ class MultiRobotPathLossBuilder:
         return positions[1:] + t[:, None, None] * delta
 
     def _direction_constraint_loss(self, optimized_state: MultiRobotPathOptimizedState):
-        deltas = self.non_holonomic_constraint_deltas(optimized_state.positions)
+        deltas = self.non_holonomic_constraint_deltas(
+            optimized_state.positions)
         constraint_deltas = torch.mean(deltas ** 2)
-        self._metric_manager.add_metric('constraint_deltas', math.sqrt(constraint_deltas.item()))
+        self._metric_manager.add_metric(
+            'constraint_deltas', math.sqrt(constraint_deltas.item()))
         return self._parameters.direction_constraint_weight * constraint_deltas + torch.mean(
             optimized_state.direction_constraint_multipliers * deltas)
 
@@ -304,12 +328,15 @@ class GradPreconditioner:
         point_count = optimized_state.positions_.shape[0]
         if self._inverse_hessian is None:
             self._inverse_hessian = self._calculate_inv_hessian(point_count)
-        reshaped_grad = optimized_state.positions_.grad.reshape(point_count, -1)
+        reshaped_grad = optimized_state.positions_.grad.reshape(
+            point_count, -1)
         reshaped_grad = self._inverse_hessian @ reshaped_grad
-        optimized_state.positions_.grad = reshaped_grad.reshape(optimized_state.positions_.grad.shape)
+        optimized_state.positions_.grad = reshaped_grad.reshape(
+            optimized_state.positions_.grad.shape)
 
     def _calculate_inv_hessian(self, point_count):
-        hessian = self._velocity_hessian_weight * self._calculate_velocity_hessian(point_count) + np.eye(point_count)
+        hessian = self._velocity_hessian_weight * \
+            self._calculate_velocity_hessian(point_count) + np.eye(point_count)
         inv_hessian = np.linalg.inv(hessian)
         return torch.tensor(inv_hessian.astype(np.float32), device=self._device)
 
@@ -377,7 +404,8 @@ class PathOptimizer:
 
     def step(self, collision_model):
         self._optimizer.zero_grad()
-        loss = self._loss_builder.get_loss(collision_model, self._optimized_state)
+        loss = self._loss_builder.get_loss(
+            collision_model, self._optimized_state)
         self._timer.tick("trajectory_backward")
         loss.backward()
         self._timer.tock("trajectory_backward")
@@ -408,12 +436,15 @@ class CollisionModelPointSampler:
     def sample(self, result_path: MultiRobotResultPath) -> np.ndarray:
         positions: np.ndarray = result_path.numpy_positions
         if self._positions is None:
-            self._positions = np.zeros((0, positions.shape[1], positions.shape[2]))
+            self._positions = np.zeros(
+                (0, positions.shape[1], positions.shape[2]))
         points = positions[:, :, :2]
         angles = positions[:, :, 2]
 
-        course_points = points + np.random.randn(*points.shape) * self._course_random_offset
-        fine_points = points + np.random.randn(*points.shape) * self._fine_random_offset
+        course_points = points + \
+            np.random.randn(*points.shape) * self._course_random_offset
+        fine_points = points + \
+            np.random.randn(*points.shape) * self._fine_random_offset
         points = np.concatenate([course_points, fine_points], axis=0)
         angles = np.concatenate([angles, angles], axis=0) + np.random.randn(2 * angles.shape[0],
                                                                             angles.shape[1]) * self._angle_random_offset
@@ -438,7 +469,8 @@ class ONFModelConfig:
 class ONF(nn.Module):
     def __init__(self, parameters: ONFModelConfig):
         super().__init__()
-        self.encoding_layer = nn.Linear(parameters.input_dimension, parameters.encoding_dimension)
+        self.encoding_layer = nn.Linear(
+            parameters.input_dimension, parameters.encoding_dimension)
         self.mlp1 = self.make_mlp(parameters.encoding_dimension, parameters.hidden_dimensions[:-1],
                                   parameters.hidden_dimensions[-1])
         self.mlp2 = self.make_mlp(parameters.encoding_dimension + parameters.hidden_dimensions[-1], [],
@@ -500,8 +532,10 @@ class CollisionNeuralFieldModelTrainer:
         self._optimizer.zero_grad()
         predicted_collision = self._calculate_predicted_collision(points)
         truth_collision = self._calculate_truth_collision(points)
-        truth_collision = torch.tensor(truth_collision.astype(np.float32), device=self._device)
-        loss = self._collision_loss_function(predicted_collision, truth_collision)
+        truth_collision = torch.tensor(
+            truth_collision.astype(np.float32), device=self._device)
+        loss = self._collision_loss_function(
+            predicted_collision, truth_collision)
         loss.backward()
         self._optimizer.step()
         self._collision_model.requires_grad_(False)
@@ -509,7 +543,8 @@ class CollisionNeuralFieldModelTrainer:
 
     def _calculate_predicted_collision(self, positions: np.array):
         positions = positions.reshape(positions.shape[0], -1)
-        result = self._collision_model(torch.tensor(positions.astype(np.float32), device=self._device))
+        result = self._collision_model(torch.tensor(
+            positions.astype(np.float32), device=self._device))
         return result
 
     def _calculate_truth_collision(self, positions: np.array):
@@ -613,9 +648,11 @@ class MultiProcessWarehouseNFOMP(WarehouseNFOMP):
     def setup(self):
         super().setup()
         self._path_queue.put(self._path_optimizer.result_path)
-        self._collision_model_process = Process(target=self.collision_model_function)
+        self._collision_model_process = Process(
+            target=self.collision_model_function)
         self._collision_model_process.start()
-        self._points_sampler_process = Process(target=self.points_sampler_function)
+        self._points_sampler_process = Process(
+            target=self.points_sampler_function)
         self._points_sampler_process.start()
 
     def collision_model_function(self):

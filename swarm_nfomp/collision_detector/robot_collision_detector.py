@@ -11,11 +11,18 @@ from swarm_nfomp.utils.position_array2d import PositionArray2D
 
 class RobotCollisionDetector(CollisionDetector[Position2D]):
     def __init__(self, inside_rectangle_region: MultiPolygon, outside_rectangle_region: Polygon,
-                 robot_shape: Polygon, collision_step: float):
+                 robot_shape: Polygon, collision_gap: float, collision_step: float):
         self.inside_rectangle_region = inside_rectangle_region
         self.outside_rectangle_region = outside_rectangle_region
-        self.robot_shape = robot_shape
+        # self.robot_shape = robot_shape
         self.collision_step = collision_step
+        # self.collision_gap = collision_gap
+        self.robot_shape = Polygon.from_bounds(
+            robot_shape.bounds[0] - collision_gap,
+            robot_shape.bounds[1] - collision_gap,
+            robot_shape.bounds[2] + collision_gap,
+            robot_shape.bounds[3] + collision_gap,
+        )
         self.number_collision_between_checks = 0
 
     @staticmethod
@@ -62,7 +69,8 @@ class RobotCollisionDetector(CollisionDetector[Position2D]):
 
     @classmethod
     def from_dict(cls, data: Dict):
-        inside_region = MultiPolygon([Polygon(p) for p in data["inside_polygon"]])
+        inside_region = MultiPolygon([Polygon(p)
+                                     for p in data["inside_polygon"]])
         outside_region = Polygon(data["outside_polygon"])
         robot_shape = Polygon(data["robot_shape"])
         return cls(inside_region, outside_region, robot_shape, data["collision_step"])

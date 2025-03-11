@@ -102,8 +102,11 @@ def main():
     #     parent_path, "configs/multi_robot_planner_tasks/four_robot_task_random.yaml"
     # )
     # task_config_path = os.path.join(parent_path, "configs/multi_robot_planner_tasks/two_robot_task_corner.yaml")
+    # task_config_path = os.path.join(
+    #     parent_path, "configs/multi_robot_planner_tasks/two_robot_corridor.yaml"
+    # )
     task_config_path = os.path.join(
-        parent_path, "configs/multi_robot_planner_tasks/two_robot_corridor.yaml"
+        parent_path, "configs/multi_robot_planner_tasks/two_robot_task_labyrinth.yaml"
     )
     planner_config_path = os.path.join(
         parent_path, "configs/nfomp_planners/warehouse_nfomp.yaml"
