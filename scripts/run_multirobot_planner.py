@@ -18,6 +18,7 @@ from swarm_nfomp.utils.timer import Timer
 from swarm_nfomp.utils.universal_factory import UniversalFactory
 from swarm_nfomp.warehouse_nfomp.warehouse_nfomp import (
     MultiRobotPathPlannerTask,
+    MultiRobot3DPathPlannerTask,
     WarehouseNFOMP,
     MultiProcessWarehouseNFOMP,
 )
@@ -33,6 +34,9 @@ from swarm_nfomp.warehouse_nfomp.warehouse_nfomp_visualizer import (
 )
 
 VISUALIZATION_FILE_NAME = "data/warehouse_nfomp.png"
+
+
+np.set_printoptions(precision=4, suppress=True)
 
 
 def log_figure(logger: clearml.Logger, iteration: int):
@@ -82,31 +86,24 @@ def get_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--task_config", type=str, required=False)
     parser.add_argument("--planner_config", type=str, required=False)
-    parser.add_argument("--iterations", type=int, required=False, default=1500)
+    parser.add_argument("--iterations", type=int, required=False, default=100)
     parser.add_argument("--device", type=str, default="cpu", required=False)
-    parser.add_argument("--visualize", type=bool, default=False, required=False)
+    parser.add_argument("--visualize", type=bool, default=True, required=False)
     return parser.parse_args()
 
 
 def main():
-    task: clearml.Task = clearml.Task.init(
-        project_name="warehouse-nfomp",
-        task_name="run_multirobot_planner",
-        task_type=clearml.Task.TaskTypes.inference,
-        auto_connect_frameworks=False,
-        reuse_last_task_id=True,
-    )
+    # task: clearml.Task = clearml.Task.init(
+    #     project_name="warehouse-nfomp",
+    #     task_name="run_multirobot_3d_planner",
+    #     task_type=clearml.Task.TaskTypes.inference,
+    #     auto_connect_frameworks=False,
+    #     reuse_last_task_id=True,
+    # )
     args = get_arguments()
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    # task_config_path = os.path.join(
-    #     parent_path, "configs/multi_robot_planner_tasks/four_robot_task_random.yaml"
-    # )
-    # task_config_path = os.path.join(parent_path, "configs/multi_robot_planner_tasks/two_robot_task_corner.yaml")
-    # task_config_path = os.path.join(
-    #     parent_path, "configs/multi_robot_planner_tasks/two_robot_corridor.yaml"
-    # )
     task_config_path = os.path.join(
-        parent_path, "configs/multi_robot_planner_tasks/two_robot_task_labyrinth.yaml"
+        parent_path, "configs/multi_robot_planner_tasks/3d_tasks/two_robot_task.yaml"
     )
     planner_config_path = os.path.join(
         parent_path, "configs/nfomp_planners/warehouse_nfomp.yaml"
@@ -114,11 +111,11 @@ def main():
 
     task_config = load_config(task_config_path)
     planner_config = load_config(planner_config_path)
-    task.connect(task_config, name="task_config")
-    task.connect(planner_config, name="planner_config")
+    # task.connect(task_config, name="task_config")
+    # task.connect(planner_config, name="planner_config")
 
     factory = UniversalFactory(
-        MultiRobotPathPlannerTask, WarehouseNFOMP, MultiProcessWarehouseNFOMP
+        MultiRobotPathPlannerTask, MultiRobot3DPathPlannerTask, WarehouseNFOMP, MultiProcessWarehouseNFOMP
     )
 
     torch.manual_seed(planner_config["seed"])
@@ -127,14 +124,14 @@ def main():
     global_timer = Timer()
     device_parameter = args.device
     planner_task = factory.make(parameters=task_config)
-    robot_count = len(planner_task.collision_detector.robot_shapes)
+    robot_count = len(planner_task.collision_detector._robot_shapes)
     metric_manager = MetricManager()
     planner = factory.make(
         parameters=planner_config,
         planner_task=planner_task,
         timer=global_timer,
         device=device_parameter,
-        input_dimension=3 * robot_count,
+        input_dimension=6 * robot_count,
         output_dimension=robot_count,
         iterations=iterations,
         metric_manager=metric_manager,
@@ -142,12 +139,12 @@ def main():
     metric_calculator = WarehouseNfompMetricCalculator(metric_manager)
 
     planner.setup()
-    queue = None
-    process = None
-    if args.visualize:
-        queue = Queue()
-        process = Process(target=plot_process_function, args=(queue, task.get_logger()))
-        process.start()
+    # queue = None
+    # process = None
+    # if args.visualize:
+    #     queue = Queue()
+    #     process = Process(target=plot_process_function, args=(queue, task.get_logger()))
+    #     process.start()
     result = None
     for i in tqdm(range(iterations)):
         planner.step()
@@ -155,24 +152,24 @@ def main():
         result.iteration = i
         if i % 10 == 0:
             metric_calculator.calculate_metrics(result, planner_task.collision_detector)
-            metric_manager.log_metrics(task.get_logger())
+            # metric_manager.log_metrics(task.get_logger())
         metric_manager.update_iteration()
-        if args.visualize:
-            queue.put((copy.deepcopy(planner.planner_task), copy.deepcopy(result)))
+        # if args.visualize:
+        #     queue.put((copy.deepcopy(planner.planner_task), copy.deepcopy(result)))
     planner.stop()
-    if args.visualize:
-        queue.put(None)
-        process.join()
+    # if args.visualize:
+    #     queue.put(None)
+    #     process.join()
     visualizer_parameters = CollisionDetectionResultVisualizerConfig(
         xmin=-10, xmax=10, ymin=-5, ymax=5
     )
     visualizer = WarehousePathPlannerResultVisualizer(parameters=visualizer_parameters)
     visualizer.visualize(planner_task.collision_detector, result)
     visualizer.save("data/warehouse_path_planner_result.html")
-    task.upload_artifact(
-        "warehouse_path_planner_result", "data/warehouse_path_planner_result.html"
-    )
-    task.close()
+    # task.upload_artifact(
+    #     "warehouse_path_planner_result", "data/warehouse_path_planner_result.html"
+    # )
+    # task.close()
 
 
 if __name__ == "__main__":

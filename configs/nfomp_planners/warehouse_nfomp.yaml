@@ -28,7 +28,7 @@ path_optimizer:
   loss_builder:
     regularization_weight: 5.0
     collision_weight: 5.0
-    direction_constraint_weight: 30
+    direction_constraint_weight: 0.0
     second_differences_weight: 30
   state_initializer:
     path_state_count: 100

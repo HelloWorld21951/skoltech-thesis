@@ -7,8 +7,10 @@ import plotly.graph_objects as go
 from shapely import Polygon, MultiPolygon
 
 from swarm_nfomp.collision_detector.multi_robot_collision_detector import MultiRobotCollisionDetector
+from swarm_nfomp.collision_detector.multi_robot_3d_collision_detector import MultiRobot3DCollisionDetector
 from swarm_nfomp.utils.position_array2d import PositionArray2D
-from swarm_nfomp.warehouse_nfomp.warehouse_nfomp import MultiRobotResultPath
+from swarm_nfomp.utils.position_array3d import PositionArray3D
+from swarm_nfomp.warehouse_nfomp.warehouse_nfomp import MultiRobotResultPath, MultiRobot3DResultPath
 
 
 @dataclasses.dataclass
@@ -17,6 +19,8 @@ class CollisionDetectionResultVisualizerConfig:
     xmax: float
     ymin: float
     ymax: float
+    zmin: float
+    zmax: float
 
 
 class CollisionDetectionResultVisualizer:
@@ -24,7 +28,7 @@ class CollisionDetectionResultVisualizer:
         self._fig = go.Figure()
         self.parameters = parameters
 
-    def visualize(self, detector: MultiRobotCollisionDetector, robot_positions: List[PositionArray2D]):
+    def visualize(self, detector: MultiRobot3DCollisionDetector, robot_positions: List[PositionArray3D]):
         self.draw_initial_polygons(detector)
         self.add_frames(detector, robot_positions)
         self.update_layout()
